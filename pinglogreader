@@ -1,0 +1,120 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+# Copyright Brandon W Maister 2012, rights reserved in accord with the BSD
+# license: Keep my name, and this message, with the file. If you decide to
+# share it. I'm not responsible if your computer blows up.
+
+import re
+from datetime import datetime
+from optparse import OptionParser
+
+INTERVAL = 2
+
+class Batch(object):
+    def __init__(self, start, end, ip):
+        self.start = start
+        self.end = end
+        self.ips = [ip]
+
+
+    def __str__(self):
+        timefmt = '%m-%d %H:%M:%S'
+        delta = self.end - self.start
+        delta = (delta.seconds + (delta.days * 24 * 3600))
+        if delta > 0: # only show a range if there's a range to show
+            string = "%(start)s -- %(end)s "\
+                "(%(mintotal)ss - %(maxtotal)ss) [%(ips)s]"
+            ips = ','.join(self.ips)
+            maxtotal = delta + (2 * INTERVAL)
+            subs = {
+                "start": self.start.strftime(timefmt),
+                "end": self.end.strftime(timefmt),
+                "mintotal": delta,
+                "maxtotal": maxtotal,
+                "ips": ips
+                }
+            string = string % subs
+        else:
+            string = "%s (0s - %ss) [%s]" % (
+                self.start.strftime(timefmt),
+                2 * INTERVAL,
+                ','.join(self.ips))
+        return string
+
+def unreachable_lines(fname):
+    unreachable = re.compile(r'\[(?P<time>[0-9.]+)\] '
+                             'From (?P<ip>[0-9.]+) '
+                             '.*Destination Host Unreachable')
+
+    try:
+        fh = open(fname, 'r')
+
+        # contiguous is set to False every time we get a successful ping
+        # And True after every unsuccessful ping.
+        # Thus, when it is True, we have had at least two unsuccessful pings
+        # in a row.
+        last_iter_matched = False
+        for line in fh:
+            match = unreachable.search(line)
+            if match:
+                yield (
+                    datetime.fromtimestamp(float(match.group('time'))),
+                    match.group('ip'),
+                    last_iter_matched
+                    )
+                last_iter_matched = True
+            else:
+                last_iter_matched = False
+
+    finally:
+        fh.close()
+
+def downtimes(fname, verbose=False):
+    batch = None
+
+    batches = []
+
+    if verbose:
+        print "Individual times failed:"
+
+    for time, ip, continues_previous in unreachable_lines(fname):
+        if not continues_previous: # we've got a new failure period
+            if verbose:
+                print "--"
+
+            if batch is not None:
+                batches.append(batch)
+            batch = Batch(time, time, ip)
+        else:
+            batch.end = time
+            if ip != batch.ips[-1]:
+                batch.ips.append(ip)
+        if verbose:
+            print time
+
+    batches.append(batch) # get the last one
+
+    if verbose:
+        print "\nEnd individual times", "-" * 30, '\n'
+
+    return batches
+
+def parse_args():
+    default_file = "/var/log/network_uptime"
+
+    parser = OptionParser()
+    parser.add_option('-f', '--logfile',
+                      default=default_file,
+                      help="The file to parse (default: %s)" % default_file)
+    parser.add_option('-v', '--verbose',
+                      action='store_true',
+                      default=False,
+                      help="Talk about what's going on.")
+    return parser.parse_args()[0]
+
+if __name__ == '__main__':
+    opts = parse_args()
+    batches = downtimes(opts.logfile, verbose=opts.verbose)
+    for batch in batches:
+        print batch

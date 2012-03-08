@@ -1,0 +1,54 @@
+#!/bin/sh
+
+# Copyright Brandon W Maister 2012, rights reserved in accord with the BSD
+# license: Keep my name, and this message, with the file. If you decide to
+# share it. I'm not responsible if your computer blows up.
+
+default_log="/var/log/network_uptime"
+
+usage="pinglogcompress [options] [logfile]
+
+    where \"options\" can be:
+        -v   : Verbose output (show the resulting file)
+        -s   : Simulate: don't actually move anything. Implies -v.
+        -h   : Print this help and exit.
+
+    and 'logfile' is the optional file to parse. Default '$default_log'"
+
+while getopts "vsh" o ; do
+    case "$o" in
+        v)  verbose=yes
+            ;;
+        s)  simulate=yes
+            ;;
+        h)  help=yes
+            ;;
+    esac
+done
+
+shift $(($OPTIND - 1)) # $1 is now the first non-opt argument
+
+if [ $1 = "--help" ] || [ ! -z $help ]; then
+    echo "$usage"
+    exit
+fi
+
+if [ -z $1  ] ; then
+    log=$default_log
+else
+    log=$@
+fi
+
+tmp="/tmp/network_uptime"
+
+grep -C2 'Destination Host Unreachable' $log | grep -v '^--$' > $tmp
+
+if [ ! -z $verbose ] || [ ! -z $simulate ] ; then
+    cat $tmp
+fi
+
+if [ ! -z $simulate ] ; then
+    mv $tmp $log
+else
+    rm $tmp
+fi

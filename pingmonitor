@@ -1,0 +1,33 @@
+#!/bin/sh
+
+# Copyright Brandon W Maister 2012, rights reserved in accord with the BSD
+# license: Keep my name, and this message, with the file. If you decide to
+# share it. I'm not responsible if your computer blows up.
+
+default_logfile="/var/log/network_uptime"
+
+usage="pingmonitor [logfile]
+
+    Run this script and it will start ping appending to logfile,
+    default '${default_logfile}'. Ping will be in the background and
+    disowned, so you should be able to log out of an ssh session without
+    worrying about it.
+
+    I'm not being very careful, though, so Don't Trust Me.
+
+    The ping interval is 2 seconds, so you should probably run
+    pinglogcompress every day or two, as it tends to generate about 15MB/day."
+
+if [ $1 = "-h" ] || [ $1 = "--help" ] ; then
+    echo "$usage"
+    exit
+fi
+
+if [ ! -z $1 ] ; then
+    logfile=$1
+else
+    logfile=$default_logfile
+fi
+
+ping -D -i2 -W1 8.8.8.8 >>$logfile 2>>${logfile}.error &
+disown
