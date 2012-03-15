@@ -47,7 +47,7 @@ if [ -n "$verbose" ] || [ -n "$simulate" ] ; then
     cat "$tmp"
 fi
 
-if [ ! -z "$simulate" ] ; then
+if [ -z "$simulate" ] ; then
     mv "$tmp" "$log"
 else
     rm "$tmp"
