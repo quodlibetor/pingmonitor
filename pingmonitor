@@ -18,16 +18,15 @@ usage="pingmonitor [logfile]
     The ping interval is 2 seconds, so you should probably run
     pinglogcompress every day or two, as it tends to generate about 15MB/day."
 
-if [ $1 = "-h" ] || [ $1 = "--help" ] ; then
+if [ "$1" = "-h" ] || [ "$1" = "--help" ] ; then
     echo "$usage"
     exit
 fi
 
-if [ ! -z $1 ] ; then
+if [ -n "$1" ] ; then
     logfile=$1
 else
     logfile=$default_logfile
 fi
 
-ping -D -i2 -W1 8.8.8.8 >>$logfile 2>>${logfile}.error &
-disown
+nohup ping -D -i2 -W1 8.8.8.8 >>$logfile 2>>${logfile}.error &

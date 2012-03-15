@@ -28,27 +28,27 @@ done
 
 shift $(($OPTIND - 1)) # $1 is now the first non-opt argument
 
-if [ $1 = "--help" ] || [ ! -z $help ]; then
+if [ "$1" = "--help" ] || [ -n "$help" ]; then
     echo "$usage"
     exit
 fi
 
-if [ -z $1  ] ; then
-    log=$default_log
+if [ -z "$1"  ] ; then
+    log="$default_log"
 else
-    log=$@
+    log="$1"
 fi
 
 tmp="/tmp/network_uptime"
 
-grep -C2 'Destination Host Unreachable' $log | grep -v '^--$' > $tmp
+grep -C2 'Destination Host Unreachable' "$log" | grep -v '^--$' > "$tmp"
 
-if [ ! -z $verbose ] || [ ! -z $simulate ] ; then
-    cat $tmp
+if [ -n "$verbose" ] || [ -n "$simulate" ] ; then
+    cat "$tmp"
 fi
 
-if [ ! -z $simulate ] ; then
-    mv $tmp $log
+if [ ! -z "$simulate" ] ; then
+    mv "$tmp" "$log"
 else
-    rm $tmp
+    rm "$tmp"
 fi
